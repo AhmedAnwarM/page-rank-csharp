@@ -1,0 +1,170 @@
+﻿@using System.Diagnostics
+@model test.Models.SearchModel
+
+@functions {
+
+    private class SearchResult
+    {
+        public string Title { get; set; }
+        public string Link { get; set; }
+        public string Snippet { get; set; }
+        public int Rank { get; set; }
+        public double LoadingTime { get; set; }
+    }
+
+    private static class PageRankCtrl
+    {
+        private static readonly WebClient Client = new WebClient();
+
+        public static List<SearchResult> ExecuteSearch(string query)
+        {
+            var searchResults = GetResults(query);
+            return !searchResults.Any() ? new List<SearchResult>() : RankResults(searchResults, true, true, true, true, true);
+        }
+
+        static List<SearchResult> GetResults(string terms)
+        {
+            Console.WriteLine("PageRankCtrl.GetResults - Entering with parameter: " + terms);
+            if (string.IsNullOrEmpty(terms))
+                return new List<SearchResult>();
+            var json = Client
+                .DownloadString(
+                                "https://www.googleapis.com/customsearch/v1?" +
+                                "key=AIzaSyCi3plpgvHzaGRVcYD6tU5v0tsIPquiR58&" +
+                                "cx=017576662512468239146:omuauf_lfve&" +
+                                "q=" + terms.Replace(' ', '+'));
+            Console.WriteLine("PageRankCtrl.GetResults - Downloaded JSON string: " + json);
+            
+            var itemsArrayStart = json.IndexOf("\"items\": [", StringComparison.Ordinal) + 9;
+            json = json.Substring(itemsArrayStart, json.LastIndexOf('}') - itemsArrayStart);
+            Console.WriteLine("JSON string with items array only: " + json);
+            var searchResults = Json.Decode<SearchResult[]>(json);
+            Console.WriteLine("PageRankCtrl.GetResults - Exiting with return value: " + searchResults);
+            return searchResults.ToList();
+        }
+
+        static List<SearchResult> RankResults(List<SearchResult> searchResults,
+                                              bool numberOfKeywords,
+                                              bool lastUpdate,
+                                              bool domainAge,
+                                              bool domainRegisterDate,
+                                              bool loadingSpeed)
+        {
+            if (!searchResults.Any())
+                return new List<SearchResult>();
+            if (numberOfKeywords)
+            {
+            }
+            if (lastUpdate)
+            {
+            }
+            if (domainAge)
+            {
+            }
+            if (domainRegisterDate)
+            {
+            }
+            if (loadingSpeed)
+            {
+                searchResults = RankLoadingSpeed(searchResults);
+            }
+            foreach (var result in searchResults)
+            {
+                result.Rank = (int) result.LoadingTime;
+            }
+            return searchResults.OrderBy(r => r.Rank).ToList();
+        }
+
+        private static List<SearchResult> RankLoadingSpeed(List<SearchResult> results)
+        {
+            foreach (var result in results)
+            {
+                try
+                {
+                    var watch = Stopwatch.StartNew();
+                    Client.DownloadData(result.Link);
+                    watch.Stop();
+                    result.LoadingTime = watch.ElapsedMilliseconds;
+                    Console.WriteLine(result.Link + ": Loading time in millis: " + watch.ElapsedMilliseconds);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message + "\t" + e.StackTrace);
+                    result.LoadingTime = -1;
+                }
+            }
+            var maxLoadingTime = results.Max(r => r.LoadingTime);
+            Console.WriteLine("maxLoadingTime in millis: " + maxLoadingTime);
+            foreach (var result in results)
+            {
+                Console.WriteLine("loadingTime in millis: " + result.LoadingTime);
+                if (result.LoadingTime == -1)
+                    result.LoadingTime = 0;
+                else
+                    result.LoadingTime = 100 - result.LoadingTime * 100 / maxLoadingTime;
+                Console.WriteLine("Normalized loading time (percentage): " + result.LoadingTime);
+            }
+
+            return results;
+        }
+
+        private static List<SearchResult> RankDomainQuality(List<SearchResult> results)
+        {
+            var json = Client
+                .DownloadString("https://www.whoisxmlapi.com/whoisserver/WhoisService?" +
+                                "apiKey=at_zjamXqyabDnMCdA6oWw0Y91aFQm3t&" +
+                                "domainName=");
+            return results;
+        }
+    }
+
+    private List<SearchResult> results = new List<SearchResult>();
+}
+
+@{
+    ViewBag.Title = "Page Rank";
+}
+
+<div class="row">
+    <div id="page">
+        <form id="searchForm" method="post">
+            <fieldset>
+                @Html.TextBox("s")
+                @*                <input id="s" type="text"/>*@
+                <input type="submit" value="Submit" id="submitButton" onclick=
+                       @{
+                           results.Clear();
+                           results = PageRankCtrl.ExecuteSearch(Request.Form["s"]);
+                           Console.WriteLine("SearchText: " + Request.Form["s"]);
+                       }/>
+
+                <div id="searchInContainer">
+                    <input type="radio" name="check" value="site" id="searchSite" checked/>
+                    <label for="searchSite" id="siteNameLabel">Search</label>
+
+                    <input type="radio" name="check" value="web" id="searchWeb"/>
+                    <label for="searchWeb">Search The Web</label>
+                </div>
+            </fieldset>
+        </form>
+
+        <div id="pattern" class="col-md-12">
+            <ul class="list">
+                @foreach (var result in results)
+                {
+                    <li>
+                        <a href=@result.Link class="inner">
+                            <div class="li-img">
+                                <h2>@result.Rank</h2>
+                            </div>
+                            <div class="li-text">
+                                <h4 class="li-head">@result.Title</h4>
+                                <p class="li-summary">@result.Snippet</p>
+                            </div>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
