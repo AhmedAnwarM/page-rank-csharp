@@ -1,140 +1,8 @@
-﻿@using System.Diagnostics
-@using System.Xml
-@using System.Xml.Serialization
-@model test.Models.SearchModel
+﻿@using test.Controllers
+@using test.Models
+@*@model test.Models.SearchModel*@
 
 @functions {
-
-    public class SearchResult
-    {
-        public string Title { get; set; }
-        public string Link { get; set; }
-        public string DisplayLink { get; set; }
-        public string Snippet { get; set; }
-
-        public double LoadingTime { get; set; }
-        public double DomainAge { get; set; }
-        public double DomainLastUpdated { get; set; }
-        public double DomainRegisterDate { get; set; }
-
-        public int Rank { get; set; }
-    }
-
-    public static class PageRankCtrl
-    {
-        private static readonly WebClient Client = new WebClient();
-
-        public static List<SearchResult> ExecuteSearch(string query)
-        {
-            var searchResults = GetResults(query);
-            return !searchResults.Any() ? new List<SearchResult>() : RankResults(searchResults, true, true, true, true, true);
-        }
-
-        static List<SearchResult> GetResults(string terms)
-        {
-            Console.WriteLine("PageRankCtrl.GetResults - Entering with parameter: " + terms);
-            if (string.IsNullOrEmpty(terms))
-                return new List<SearchResult>();
-            var json = Client
-                .DownloadString(
-                                "https://www.googleapis.com/customsearch/v1?" +
-                                "key=AIzaSyCi3plpgvHzaGRVcYD6tU5v0tsIPquiR58&" +
-                                "cx=017576662512468239146:omuauf_lfve&" +
-                                "q=" + terms.Replace(' ', '+'));
-    //            Console.WriteLine("PageRankCtrl.GetResults - Downloaded JSON string: " + json);
-
-            var itemsArrayStart = json.IndexOf("\"items\": [", StringComparison.Ordinal) + 9;
-            json = json.Substring(itemsArrayStart, json.LastIndexOf('}') - itemsArrayStart);
-    //            Console.WriteLine("JSON string with items array only: " + json);
-            var searchResults = Json.Decode<SearchResult[]>(json);
-            Console.WriteLine("PageRankCtrl.GetResults - Exiting with return value: " + searchResults);
-            return searchResults.ToList();
-        }
-
-        static List<SearchResult> RankResults(List<SearchResult> searchResults,
-                                              bool numberOfKeywords,
-                                              bool lastUpdate,
-                                              bool domainAge,
-                                              bool domainRegisterDate,
-                                              bool loadingSpeed)
-        {
-            if (!searchResults.Any())
-                return new List<SearchResult>();
-            if (numberOfKeywords)
-            {
-            }
-            if (lastUpdate || domainAge || domainRegisterDate)
-            {
-                searchResults = RankDomainQuality(searchResults, lastUpdate, domainAge, domainRegisterDate);
-            }
-            if (loadingSpeed)
-            {
-                searchResults = RankLoadingSpeed(searchResults);
-            }
-            foreach (var result in searchResults)
-            {
-                result.Rank = (int) (result.LoadingTime + result.DomainAge + result.DomainRegisterDate + result.DomainLastUpdated);
-            }
-            return searchResults.OrderBy(r => r.Rank).ToList();
-        }
-
-        private static List<SearchResult> RankLoadingSpeed(List<SearchResult> results)
-        {
-            foreach (var result in results)
-            {
-                try
-                {
-                    var watch = Stopwatch.StartNew();
-                    Client.DownloadData(result.Link);
-                    watch.Stop();
-                    result.LoadingTime = watch.ElapsedMilliseconds;
-                    Console.WriteLine(result.Link + ": Loading time in millis: " + watch.ElapsedMilliseconds);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message + "\t" + e.StackTrace);
-                    result.LoadingTime = -1;
-                }
-            }
-            var maxLoadingTime = results.Max(r => r.LoadingTime);
-            Console.WriteLine("maxLoadingTime in millis: " + maxLoadingTime);
-            foreach (var result in results)
-            {
-                Console.WriteLine("loadingTime in millis: " + result.LoadingTime);
-                if (Math.Abs(result.LoadingTime + 1) <= 0)
-                    result.LoadingTime = 0;
-                else
-                    result.LoadingTime = 100 - result.LoadingTime * 100 / maxLoadingTime;
-                Console.WriteLine("Normalized loading time (percentage): " + result.LoadingTime);
-            }
-
-            return results;
-        }
-
-        private static List<SearchResult> RankDomainQuality(List<SearchResult> results,
-                                                            bool lastUpdate, bool domainAge, bool domainRegisterDate)
-        {
-            foreach (var result in results)
-            {
-                var xml = Client
-                    .DownloadString("https://www.whoisxmlapi.com/whoisserver/WhoisService?" +
-                                    "apiKey=at_zjamXqyabDnMCdA6oWw0Y91aFQm3t&" +
-                                    "domainName=" + result.DisplayLink);
-                Console.WriteLine("Fetched site info from Whois: \r\n" + xml);
-                var doc = new XmlDocument();
-                doc.LoadXml(xml);
-                var updatedDateNormalized = doc.GetElementsByTagName("updatedDateNormalized").Item(0).InnerText;
-                var expiresDateNormalized = doc.GetElementsByTagName("expiresDateNormalized").Item(0).InnerText;
-                var estimatedDomainAge = doc.GetElementsByTagName("estimatedDomainAge").Item(0).InnerText;
-                Console.WriteLine("Mapped XML: " +
-                                  updatedDateNormalized + "\r\n" +
-                                  expiresDateNormalized + "\r\n" +
-                                  estimatedDomainAge);
-            }
-            return results;
-        }
-    }
-
     private List<SearchResult> _results = new List<SearchResult>();
 }
 
@@ -151,7 +19,7 @@
                 <input type="submit" value="Submit" id="submitButton" onclick=
                        @{
                            _results.Clear();
-                           _results = PageRankCtrl.ExecuteSearch(Request.Form["s"]);
+                           _results = PageRankController.ExecuteSearch(Request.Form["s"]);
                            Console.WriteLine("SearchText: " + Request.Form["s"]);
                        }/>
 

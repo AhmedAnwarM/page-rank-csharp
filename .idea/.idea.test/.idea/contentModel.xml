@@ -19,12 +19,15 @@
         <e p="site.css" t="Include" />
       </e>
       <e p="Controllers" t="Include">
+        <e p="CustomWebClient.cs" t="Include" />
         <e p="HomeController.cs" t="Include" />
+        <e p="PageRankController.cs" t="Include" />
       </e>
       <e p="Global.asax" t="Include" />
       <e p="Global.asax.cs" t="Include" />
       <e p="Models" t="Include">
         <e p="SearchModel.cs" t="Include" />
+        <e p="SearchResult.cs" t="Include" />
       </e>
       <e p="Properties" t="Include">
         <e p="AssemblyInfo.cs" t="Include" />
