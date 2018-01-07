@@ -14,6 +14,11 @@
 
 <div class="row">
     <div id="page">
+        <div class="page-title">
+            <h1>
+                Page Ranking Engine
+            </h1>
+        </div>
         <div id="searchFormDiv" class="col-md-12">
             <form id="searchForm" method="post">
                 <fieldset>
@@ -127,6 +132,7 @@
                            }/>
 
                     <br/>
+                    <br/>
 
                     @Html.CheckBox("NumberOfKeywords", false)
                     @Html.Label("numberOfKeywordsLabel", "Number of Keyword Matches")
@@ -150,23 +156,34 @@
                 </fieldset>
             </form>
         </div>
-        <div id="pattern" class="col-md-12">
-            <ul class="list">
-                @foreach (var result in _results)
-                {
-                    <li>
-                        <a href=@result.Link class="inner">
-                            <div class="li-img">
-                                <h2>@result.Rank</h2>
-                            </div>
-                            <div class="li-text">
-                                <h4 class="li-head">@result.Title</h4>
-                                <p class="li-summary">@result.Snippet</p>
-                            </div>
-                        </a>
-                    </li>
-                }
-            </ul>
-        </div>
+        @if (_results.Any())
+        {
+            <div id="resultsDiv">
+                <table class="rwd-table">
+                    <tr>
+                        <th>Rank</th>
+                        <th>Info</th>
+                    </tr>
+
+                    @foreach (var result in _results)
+                    {
+                        <tr>
+                            <td data-th="Rank">
+                                <div>
+                                    <h2>@result.Rank</h2>
+                                </div>
+                            </td>
+                            <td data-th="Info">
+                                <div>
+                                    <h4>@result.Title</h4>
+                                    <a href=@result.Link class="inner">@result.Link</a>
+                                    <p class="li-summary">@result.Snippet</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        }
     </div>
 </div>
