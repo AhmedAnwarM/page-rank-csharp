@@ -1,1 +1,1 @@
-﻿<%@ Application Inherits="test.Global" %>
+﻿<%@ Application Inherits="PageRank.Global" %>

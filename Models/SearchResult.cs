@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Web.Helpers;
 
 namespace test.Models
 {
+    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
     public class SearchResult
     {
         public string Title { get; set; }
@@ -15,12 +18,13 @@ namespace test.Models
         public DateTime DomainLastUpdated { get; set; }
         public DateTime DomainExpiresDate { get; set; }
 
+        public double KeywordMatchesRanking { get; set; }
         public double LoadingTimeRanking { get; set; }
         public double DomainAgeRanking { get; set; }
         public double LastUpdateRanking { get; set; }
         public double ExpiryDateRanking { get; set; }
 
-        public int Rank { get; set; }
+        public double Rank { get; set; }
 
         public override string ToString()
         {

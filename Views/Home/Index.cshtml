@@ -1,6 +1,8 @@
-﻿@using test.Controllers
+﻿@using System.ServiceModel
+@using System.ServiceModel.Channels
+@using test.Controllers
 @using test.Models
-@*@model test.Models.SearchModel*@
+@model SearchModel
 
 @functions {
     private List<SearchResult> _results = new List<SearchResult>();
@@ -12,27 +14,142 @@
 
 <div class="row">
     <div id="page">
-        <form id="searchForm" method="post">
-            <fieldset>
-                @Html.TextBox("s")
-                @*                <input id="s" type="text"/>*@
-                <input type="submit" value="Submit" id="submitButton" onclick=
-                       @{
-                           _results.Clear();
-                           _results = PageRankController.ExecuteSearch(Request.Form["s"]);
-                           Console.WriteLine("SearchText: " + Request.Form["s"]);
-                       }/>
+        <div id="searchFormDiv" class="col-md-12">
+            <form id="searchForm" method="post">
+                <fieldset>
+                    @Html.TextBox("SearchText")
+                    <input type="submit" value="Submit" id="submitButton" onclick=
+                           @{
+                               try
+                               {
+                                   bool numberOfKeywords;
+                                   var numberOfKeywordsForm = Request.Form["NumberOfKeywords"];
+                                   if (string.IsNullOrEmpty(numberOfKeywordsForm))
+                                   {
+                                       numberOfKeywords = false;
+                                   }
+                                   else if (numberOfKeywordsForm.Contains(','))
+                                   {
+                                       numberOfKeywordsForm = numberOfKeywordsForm.Substring(0, numberOfKeywordsForm.IndexOf(','));
+                                       numberOfKeywords = numberOfKeywordsForm.AsBool();
+                                   }
+                                   else
+                                   {
+                                       numberOfKeywords = numberOfKeywordsForm.AsBool();
+                                   }
 
-                <div id="searchInContainer">
-                    <input type="radio" name="check" value="site" id="searchSite" checked/>
-                    <label for="searchSite" id="siteNameLabel">Search</label>
+                                   bool lastUpdate;
+                                   var lastUpdateForm = Request.Form["LastUpdate"];
+                                   if (string.IsNullOrEmpty(lastUpdateForm))
+                                   {
+                                       lastUpdate = false;
+                                   }
+                                   else if (lastUpdateForm.Contains(','))
+                                   {
+                                       var temp = lastUpdateForm.Substring(0, lastUpdateForm.IndexOf(','));
+                                       lastUpdate = temp.AsBool();
+                                   }
+                                   else
+                                   {
+                                       lastUpdate = lastUpdateForm.AsBool();
+                                   }
 
-                    <input type="radio" name="check" value="web" id="searchWeb"/>
-                    <label for="searchWeb">Search The Web</label>
-                </div>
-            </fieldset>
-        </form>
+                                   bool domainAge;
+                                   var domainAgeForm = Request.Form["DomainAge"];
+                                   if (string.IsNullOrEmpty(domainAgeForm))
+                                   {
+                                       domainAge = false;
+                                   }
+                                   else if (domainAgeForm.Contains(','))
+                                   {
+                                       var temp = domainAgeForm.Substring(0, domainAgeForm.IndexOf(','));
+                                       domainAge = temp.AsBool();
+                                   }
+                                   else
+                                   {
+                                       domainAge = domainAgeForm.AsBool();
+                                   }
 
+                                   bool domainExpiryDate;
+                                   var registerDateForm = Request.Form["DomainExpiryDate"];
+                                   if (string.IsNullOrEmpty(registerDateForm))
+                                   {
+                                       domainExpiryDate = false;
+                                   }
+                                   else if (registerDateForm.Contains(','))
+                                   {
+                                       var temp = registerDateForm.Substring(0, registerDateForm.IndexOf(','));
+                                       domainExpiryDate = temp.AsBool();
+                                   }
+                                   else
+                                   {
+                                       domainExpiryDate = registerDateForm.AsBool();
+                                   }
+
+                                   bool loadingSpeed;
+                                   var loadingSpeedForm = Request.Form["LoadingSpeed"];
+                                   if (string.IsNullOrEmpty(loadingSpeedForm))
+                                   {
+                                       loadingSpeed = false;
+                                   }
+                                   else if (loadingSpeedForm.Contains(','))
+                                   {
+                                       var temp = loadingSpeedForm.Substring(0, loadingSpeedForm.IndexOf(','));
+                                       loadingSpeed = temp.AsBool();
+                                   }
+                                   else
+                                   {
+                                       loadingSpeed = loadingSpeedForm.AsBool();
+                                   }
+
+                                   Console.WriteLine("SearchText: " + Request.Form["SearchText"] + "\r\n" +
+                                                     numberOfKeywords + "\r\n" +
+                                                     lastUpdate + "\r\n" +
+                                                     domainAge + "\r\n" +
+                                                     domainExpiryDate + "\r\n" +
+                                                     loadingSpeed);
+                                   _results.Clear();
+                                   _results = PageRankController.ExecuteSearch(Request.Form["SearchText"],
+                                                                               numberOfKeywords,
+                                                                               lastUpdate,
+                                                                               domainAge,
+                                                                               domainExpiryDate,
+                                                                               loadingSpeed);
+                               }
+                               catch (Exception e)
+                               {
+                                   Console.WriteLine(e);
+                                   Message.CreateMessage(MessageVersion.Default,
+                                                         FaultCode.CreateReceiverFaultCode("SearchError", "SearchError"),
+                                                         "Internal Server Error",
+                                                         "Retry your search");
+                               }
+                           }/>
+
+                    <br/>
+
+                    @Html.CheckBox("NumberOfKeywords", false)
+                    @Html.Label("numberOfKeywordsLabel", "Number of Keyword Matches")
+                    <br/>
+
+                    @Html.CheckBox("LastUpdate", false)
+                    @Html.Label("lastUpdateLabel", "Last Update")
+                    <br/>
+
+                    @Html.CheckBox("DomainAge", false)
+                    @Html.Label("domainAgeLabel", "Domain Age")
+                    <br/>
+
+                    @Html.CheckBox("DomainExpiryDate", false)
+                    @Html.Label("DomainExpiryDateLabel", "Domain Expiry Date")
+                    <br/>
+
+                    @Html.CheckBox("LoadingSpeed", false)
+                    @Html.Label("loadingSpeedLabel", "Loading Speed")
+                    <br/>
+                </fieldset>
+            </form>
+        </div>
         <div id="pattern" class="col-md-12">
             <ul class="list">
                 @foreach (var result in _results)

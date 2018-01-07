@@ -12,6 +12,7 @@ namespace test.Controllers
     {
         public ActionResult Index(SearchModel model)
         {
+            Console.WriteLine("Entering ActionResult with parameters: " + model);
             return View();
         }
     }

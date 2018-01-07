@@ -2,8 +2,9 @@
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.Http;
+using test;
 
-namespace test
+namespace PageRank
 {
     public class Global : HttpApplication
     {
