@@ -1,189 +1,73 @@
-﻿@using System.ServiceModel
-@using System.ServiceModel.Channels
-@using test.Controllers
-@using test.Models
+﻿@using test.Models
 @model SearchModel
-
-@functions {
-    private List<SearchResult> _results = new List<SearchResult>();
-}
 
 @{
     ViewBag.Title = "Page Rank";
 }
 
 <div class="row">
-    <div id="page">
+    <div id="wrap">
         <div class="page-title">
             <h1>
-                Page Ranking Engine
+                Page Rank
             </h1>
         </div>
         <div id="searchFormDiv" class="col-md-12">
-            <form id="searchForm" method="post">
-                <fieldset>
-                    @Html.TextBox("SearchText")
-                    <input type="submit" value="Submit" id="submitButton" onclick=
-                           @{
-                               try
-                               {
-                                   bool numberOfKeywords;
-                                   var numberOfKeywordsForm = Request.Form["NumberOfKeywords"];
-                                   if (string.IsNullOrEmpty(numberOfKeywordsForm))
-                                   {
-                                       numberOfKeywords = false;
-                                   }
-                                   else if (numberOfKeywordsForm.Contains(','))
-                                   {
-                                       numberOfKeywordsForm = numberOfKeywordsForm.Substring(0, numberOfKeywordsForm.IndexOf(','));
-                                       numberOfKeywords = numberOfKeywordsForm.AsBool();
-                                   }
-                                   else
-                                   {
-                                       numberOfKeywords = numberOfKeywordsForm.AsBool();
-                                   }
-
-                                   bool lastUpdate;
-                                   var lastUpdateForm = Request.Form["LastUpdate"];
-                                   if (string.IsNullOrEmpty(lastUpdateForm))
-                                   {
-                                       lastUpdate = false;
-                                   }
-                                   else if (lastUpdateForm.Contains(','))
-                                   {
-                                       var temp = lastUpdateForm.Substring(0, lastUpdateForm.IndexOf(','));
-                                       lastUpdate = temp.AsBool();
-                                   }
-                                   else
-                                   {
-                                       lastUpdate = lastUpdateForm.AsBool();
-                                   }
-
-                                   bool domainAge;
-                                   var domainAgeForm = Request.Form["DomainAge"];
-                                   if (string.IsNullOrEmpty(domainAgeForm))
-                                   {
-                                       domainAge = false;
-                                   }
-                                   else if (domainAgeForm.Contains(','))
-                                   {
-                                       var temp = domainAgeForm.Substring(0, domainAgeForm.IndexOf(','));
-                                       domainAge = temp.AsBool();
-                                   }
-                                   else
-                                   {
-                                       domainAge = domainAgeForm.AsBool();
-                                   }
-
-                                   bool domainExpiryDate;
-                                   var registerDateForm = Request.Form["DomainExpiryDate"];
-                                   if (string.IsNullOrEmpty(registerDateForm))
-                                   {
-                                       domainExpiryDate = false;
-                                   }
-                                   else if (registerDateForm.Contains(','))
-                                   {
-                                       var temp = registerDateForm.Substring(0, registerDateForm.IndexOf(','));
-                                       domainExpiryDate = temp.AsBool();
-                                   }
-                                   else
-                                   {
-                                       domainExpiryDate = registerDateForm.AsBool();
-                                   }
-
-                                   bool loadingSpeed;
-                                   var loadingSpeedForm = Request.Form["LoadingSpeed"];
-                                   if (string.IsNullOrEmpty(loadingSpeedForm))
-                                   {
-                                       loadingSpeed = false;
-                                   }
-                                   else if (loadingSpeedForm.Contains(','))
-                                   {
-                                       var temp = loadingSpeedForm.Substring(0, loadingSpeedForm.IndexOf(','));
-                                       loadingSpeed = temp.AsBool();
-                                   }
-                                   else
-                                   {
-                                       loadingSpeed = loadingSpeedForm.AsBool();
-                                   }
-
-                                   Console.WriteLine("SearchText: " + Request.Form["SearchText"] + "\r\n" +
-                                                     numberOfKeywords + "\r\n" +
-                                                     lastUpdate + "\r\n" +
-                                                     domainAge + "\r\n" +
-                                                     domainExpiryDate + "\r\n" +
-                                                     loadingSpeed);
-                                   _results.Clear();
-                                   _results = PageRankController.ExecuteSearch(Request.Form["SearchText"],
-                                                                               numberOfKeywords,
-                                                                               lastUpdate,
-                                                                               domainAge,
-                                                                               domainExpiryDate,
-                                                                               loadingSpeed);
-                               }
-                               catch (Exception e)
-                               {
-                                   Console.WriteLine(e);
-                                   Message.CreateMessage(MessageVersion.Default,
-                                                         FaultCode.CreateReceiverFaultCode("SearchError", "SearchError"),
-                                                         "Internal Server Error",
-                                                         "Retry your search");
-                               }
-                           }/>
+            <div>
+                <form class="searchform cf">
+                    @Html.TextBox("searchText", null, new {@class = "searchText"})
+                    <button type="submit">Search</button>
 
                     <br/>
                     <br/>
 
-                    @Html.CheckBox("NumberOfKeywords", false)
-                    @Html.Label("numberOfKeywordsLabel", "Number of Keyword Matches")
+                    @Html.CheckBox("NumberOfKeywords", false, new {@class = "checkBox"})
+                    @Html.LabelFor(m => m.NumberOfKeywords, "Number of Keyword Matches", new {@class = "checkBox"})
                     <br/>
 
-                    @Html.CheckBox("LastUpdate", false)
-                    @Html.Label("lastUpdateLabel", "Last Update")
+                    @Html.CheckBox("LastUpdate", false, new {@class = "checkBox"})
+                    @Html.LabelFor(m => m.LastUpdate, "Last Update", new {@class = "checkBox"})
                     <br/>
 
-                    @Html.CheckBox("DomainAge", false)
-                    @Html.Label("domainAgeLabel", "Domain Age")
+                    @Html.CheckBox("DomainAge", false, new {@class = "checkBox"})
+                    @Html.LabelFor(m => m.DomainAge, "Domain Age", new {@class = "checkBox"})
                     <br/>
 
-                    @Html.CheckBox("DomainExpiryDate", false)
-                    @Html.Label("DomainExpiryDateLabel", "Domain Expiry Date")
+                    @Html.CheckBox("DomainExpiryDate", false, new {@class = "checkBox"})
+                    @Html.LabelFor(m => m.DomainExpiryDate, "Domain Expiry Date", new {@class = "checkBox"})
                     <br/>
 
-                    @Html.CheckBox("LoadingSpeed", false)
-                    @Html.Label("loadingSpeedLabel", "Loading Speed")
+                    @Html.CheckBox("LoadingSpeed", false, new {@class = "checkBox"})
+                    @Html.LabelFor(m => m.LoadingSpeed, "Loading Speed", new {@class = "checkBox"})
                     <br/>
-                </fieldset>
-            </form>
+                </form>
+            </div>
         </div>
-        @if (_results.Any())
-        {
-            <div id="resultsDiv">
-                <table class="rwd-table">
-                    <tr>
-                        <th>Rank</th>
-                        <th>Info</th>
-                    </tr>
-
-                    @foreach (var result in _results)
+    </div>
+    <div class="row">
+        <div class="results-div">
+            @if (Model.Results != null && Model.Results.Any())
+            {
+                var i = 1;
+                <table>
+                    @foreach (var result in Model.Results)
                     {
                         <tr>
-                            <td data-th="Rank">
-                                <div>
-                                    <h2>@result.Rank</h2>
-                                </div>
+                            <td>
+                                <h1>@i</h1>
                             </td>
-                            <td data-th="Info">
-                                <div>
-                                    <h4>@result.Title</h4>
-                                    <a href=@result.Link class="inner">@result.Link</a>
-                                    <p class="li-summary">@result.Snippet</p>
-                                </div>
+                            <td>
+                                <h4>@result.Title</h4>
+                                <a href=@result.Link>@result.Link</a>
+                                <p>@result.Snippet</p>
                             </td>
                         </tr>
+                        {
+                            i++;
+                        }
                     }
                 </table>
-            </div>
-        }
+            }
+        </div>
     </div>
 </div>

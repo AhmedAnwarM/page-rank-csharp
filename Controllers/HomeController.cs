@@ -13,7 +13,12 @@ namespace test.Controllers
         public ActionResult Index(SearchModel model)
         {
             Console.WriteLine("Entering ActionResult with parameters: " + model);
-            return View();
+            if (!string.IsNullOrEmpty(model.SearchText))
+                model.Results = PageRankController.ExecuteSearch(model.SearchText, model.NumberOfKeywords,
+                                                                 model.LastUpdate,
+                                                                 model.DomainAge, model.DomainExpiryDate,
+                                                                 model.LoadingSpeed);
+            return View(model);
         }
     }
 }
