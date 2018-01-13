@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Helpers;
 using System.Xml;
@@ -22,14 +24,16 @@ namespace test.Controllers
                                                        bool loadingSpeed)
         {
             var searchResults = GetResults(query);
-            return searchResults.Any()
-                       ? RankResults(searchResults,
-                                     numberOfKeywords,
-                                     lastUpdate,
-                                     domainAge,
-                                     domainExpiryDate,
-                                     loadingSpeed)
-                       : new List<SearchResult>();
+            searchResults = searchResults.Any()
+                                ? RankResults(searchResults,
+                                              numberOfKeywords,
+                                              lastUpdate,
+                                              domainAge,
+                                              domainExpiryDate,
+                                              loadingSpeed,
+                                              query)
+                                : new List<SearchResult>();
+            return searchResults;
         }
 
         private static List<SearchResult> GetResults(string terms)
@@ -55,39 +59,65 @@ namespace test.Controllers
                                                       bool lastUpdate,
                                                       bool domainAge,
                                                       bool domainExpiryDate,
-                                                      bool loadingSpeed)
+                                                      bool loadingSpeed,
+                                                      string query)
         {
             if (!searchResults.Any())
                 return new List<SearchResult>();
             if (numberOfKeywords)
             {
-                searchResults = RankKeywordMatches(searchResults);
+//                var watch = new Stopwatch();
+//                watch.Start();
+                searchResults = RankKeywordMatches(searchResults, query);
+//                watch.Stop();
+//                Console.WriteLine("RankKeywordMatches elapsed time: " + watch.ElapsedMilliseconds);
             }
 
             if (lastUpdate || domainAge || domainExpiryDate)
             {
+//                var watch = new Stopwatch();
+//                watch.Start();
                 searchResults = RankDomainQuality(searchResults, lastUpdate, domainAge, domainExpiryDate);
+//                watch.Stop();
+//                Console.WriteLine("RankDomainQuality elapsed time: " + watch.ElapsedMilliseconds);
             }
 
             if (loadingSpeed)
             {
+//                var watch = new Stopwatch();
+//                watch.Start();
                 searchResults = RankLoadingSpeed(searchResults);
+//                watch.Stop();
+//                Console.WriteLine("RankLoadingSpeed elapsed time: " + watch.ElapsedMilliseconds);
             }
 
-            Console.WriteLine("[");
             foreach (var result in searchResults)
             {
-                result.Rank = (int) ((numberOfKeywords ? result.KeywordMatchesRanking : 0) +
-                                     (loadingSpeed ? result.LoadingTimeRanking : 0) +
-                                     (domainAge ? result.DomainAgeRanking : 0) +
-                                     (domainExpiryDate ? result.ExpiryDateRanking : 0) +
-                                     (lastUpdate ? result.LastUpdateRanking : 0));
-                Console.WriteLine(result + ",");
+//                Console.WriteLine("result.KeywordMatchesRanking: " + result.KeywordMatchesRanking +
+//                                  "result.LoadingTimeRanking: " + result.LoadingTimeRanking +
+//                                  "result.DomainAgeRanking: " + result.DomainAgeRanking +
+//                                  "result.ExpiryDateRanking: " + result.ExpiryDateRanking +
+//                                  "result.LastUpdateRanking: " + result.LastUpdateRanking);
+
+                result.Rank = (numberOfKeywords ? result.KeywordMatchesRanking : 0) +
+                              (loadingSpeed ? result.LoadingTimeRanking : 0) +
+                              (domainAge ? result.DomainAgeRanking : 0) +
+                              (domainExpiryDate ? result.ExpiryDateRanking : 0) +
+                              (lastUpdate ? result.LastUpdateRanking : 0);
+//                Console.WriteLine("result.Rank: " + result.Rank);
             }
 
-            Console.WriteLine("]");
+            searchResults = searchResults.OrderByDescending(r => r.Rank).ToList();
 
-            return searchResults.OrderByDescending(r => r.Rank).ToList();
+//            Console.WriteLine("[");
+//            foreach (var result in searchResults)
+//            {
+//                Console.WriteLine(result + ",");
+//            }
+//
+//            Console.WriteLine("]");
+
+            return searchResults;
         }
 
         private static List<SearchResult> RankLoadingSpeed(List<SearchResult> results)
@@ -96,27 +126,15 @@ namespace test.Controllers
             {
                 try
                 {
-                    while (Client.IsBusy)
-                    {
-                        Thread.Sleep(50);
-                    }
+                    var request = WebRequest.Create(result.Link);
 
-                    var request = (HttpWebRequest) WebRequest.Create(result.Link);
-                    request.AllowAutoRedirect = false;
-                    request.Method = WebRequestMethods.Http.Head;
-                    try
-                    {
-                        var watch = Stopwatch.StartNew();
-                        request.GetResponse();
-                        watch.Stop();
-                        result.LoadingTime = watch.ElapsedMilliseconds;
-                        Console.WriteLine(result.Link + ": Loading time in millis: " + watch.ElapsedMilliseconds);
-                    }
-                    catch (WebException e)
-                    {
-                        Console.WriteLine(e);
+                    var watch = Stopwatch.StartNew();
+                    var response = (HttpWebResponse) request.GetResponse();
+                    watch.Stop();
+                    if (response.StatusCode != HttpStatusCode.OK)
                         result.LoadingTime = -1;
-                    }
+                    else
+                        result.LoadingTime = watch.ElapsedMilliseconds;
                 }
                 catch (Exception e)
                 {
@@ -128,16 +146,17 @@ namespace test.Controllers
             var maxLoadingTime = results.Max(r => r.LoadingTime);
             var minLoadingTime = results.Min(r => r.LoadingTime);
             var loadingTimeDifference = maxLoadingTime - minLoadingTime;
-            Console.WriteLine("maxLoadingTime in millis: " + maxLoadingTime + "\tMin: " + minLoadingTime + "\tDiff: " +
-                              loadingTimeDifference);
+//            Console.WriteLine("maxLoadingTime in millis: " + maxLoadingTime + "\tMin: " + minLoadingTime + "\tDiff: " +
+//                              loadingTimeDifference);
             foreach (var result in results)
             {
-                Console.WriteLine("loadingTime in millis: " + result.LoadingTime);
+//                Console.WriteLine("loadingTime in millis: " + result.LoadingTime);
                 if (result.LoadingTime < 0)
                     result.LoadingTimeRanking = 0;
                 else
-                    result.LoadingTimeRanking = (result.LoadingTime - minLoadingTime) * 100 / loadingTimeDifference;
-                Console.WriteLine("Normalized loading time (ranking - pct): " + result.LoadingTimeRanking);
+                    result.LoadingTimeRanking =
+                        100 - (result.LoadingTime - minLoadingTime) * 100 / loadingTimeDifference;
+//                Console.WriteLine("Normalized loading time (ranking - pct): " + result.LoadingTimeRanking);
             }
 
             return results;
@@ -193,10 +212,10 @@ namespace test.Controllers
                         estimatedDomainAge = int.Parse(domainAgeStr);
                 }
 
-                Console.WriteLine("Mapped XML: " +
-                                  updatedDateNormalized + "\r\n" +
-                                  expiresDateNormalized + "\r\n" +
-                                  estimatedDomainAge);
+//                Console.WriteLine("Mapped XML: " +
+//                                  updatedDateNormalized + "\r\n" +
+//                                  expiresDateNormalized + "\r\n" +
+//                                  estimatedDomainAge);
                 result.DomainAge = estimatedDomainAge;
                 result.DomainLastUpdated = updatedDateNormalized;
                 result.DomainExpiresDate = expiresDateNormalized;
@@ -205,20 +224,20 @@ namespace test.Controllers
             var oldestUpdate = results.Min(result => result.DomainLastUpdated);
             var newestUpdate = results.Max(result => result.DomainLastUpdated);
             var lastUpdateDifference = (newestUpdate - oldestUpdate).TotalDays;
-            Console.WriteLine("oldestUpdate: " + oldestUpdate + "\tnewestUpdate: " + newestUpdate +
-                              "\tlastUpdateDifference: " + lastUpdateDifference);
+//            Console.WriteLine("oldestUpdate: " + oldestUpdate + "\tnewestUpdate: " + newestUpdate +
+//                              "\tlastUpdateDifference: " + lastUpdateDifference);
 
             var nearestExpiry = results.Min(result => result.DomainExpiresDate);
             var furthestExpiry = results.Max(result => result.DomainExpiresDate);
             var expiryDateDifference = (furthestExpiry - nearestExpiry).TotalDays;
-            Console.WriteLine("nearestExpiry: " + nearestExpiry + "\tfurthestExpiry: " + furthestExpiry +
-                              "\texpiryDateDifference: " + expiryDateDifference);
+//            Console.WriteLine("nearestExpiry: " + nearestExpiry + "\tfurthestExpiry: " + furthestExpiry +
+//                              "\texpiryDateDifference: " + expiryDateDifference);
 
             var newestDomain = results.Max(result => result.DomainAge);
             var oldestDomain = results.Min(result => result.DomainAge);
             var domainAgeDifference = newestDomain - oldestDomain;
-            Console.WriteLine("newestDomain: " + newestDomain + "\toldestDomain: " + oldestDomain
-                              + "\tdomainAgeDifference: " + domainAgeDifference);
+//            Console.WriteLine("newestDomain: " + newestDomain + "\toldestDomain: " + oldestDomain
+//                              + "\tdomainAgeDifference: " + domainAgeDifference);
 
             foreach (var result in results)
             {
@@ -235,10 +254,54 @@ namespace test.Controllers
             return results;
         }
 
-        private static List<SearchResult> RankKeywordMatches(List<SearchResult> results)
+        private static List<SearchResult> RankKeywordMatches(List<SearchResult> results, string query)
         {
-            //TODO: Implement
+            var keywords = query.ToLower().Split(' ').ToList();
+            foreach (var result in results)
+            {
+                var culture = CultureInfo.InstalledUICulture;
+//                Console.WriteLine("Result: " + result.Link);
+                foreach (var keyword in keywords)
+                {
+                    if (culture.CompareInfo.IndexOf(result.Link, keyword, CompareOptions.IgnoreCase) >= 0 ||
+                        culture.CompareInfo.IndexOf(result.Title, keyword, CompareOptions.IgnoreCase) >= 0)
+                    {
+                        Math.DivRem(100, keywords.Count, out var divResult);
+                        result.KeywordMatchesRanking = divResult;
+                    }
+
+//                    Console.WriteLine("Keyword: " + keyword + "\nCurrent Rank: " + result.KeywordMatchesRanking);
+                }
+
+//                Console.WriteLine("Link & Title: " + result.KeywordMatchesRanking);
+
+                var countMatches = result.Snippet.ToLower().CountMatches(keywords) * 10;
+                result.KeywordMatchesRanking += countMatches;
+//                Console.WriteLine("Count Matches: " + countMatches + "\nFinal Rank: " + result.KeywordMatchesRanking);
+            }
+
             return results;
+        }
+    }
+
+    public static class StringExtensionMethods
+    {
+        public static int CountMatches(this string text, List<string> keywords)
+        {
+            var matchCount = 0;
+            foreach (var keyword in keywords)
+            {
+                var pat = @"(\w+)\s+(" + keyword + ")";
+                var r = new Regex(pat, RegexOptions.IgnoreCase);
+                var m = r.Match(text);
+                while (m.Success)
+                {
+                    matchCount++;
+                    m = m.NextMatch();
+                }
+            }
+
+            return matchCount;
         }
     }
 }

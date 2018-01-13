@@ -40,6 +40,21 @@
                     @Html.CheckBox("LoadingSpeed", false, new {@class = "checkBox"})
                     @Html.LabelFor(m => m.LoadingSpeed, "Loading Speed", new {@class = "checkBox"})
                     <br/>
+                    @if (Model.ElapsedMilliseconds > 0)
+                    {
+                        if (Model.ElapsedSeconds == 1)
+                        {
+                            <div style="font-style: italic">
+                                <h5>Total Time Elapsed: @Model.ElapsedSeconds second (@Model.ElapsedMilliseconds milliseconds)</h5>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="font-style: italic">
+                                <h5>Total Time Elapsed: @Model.ElapsedSeconds seconds (@Model.ElapsedMilliseconds milliseconds)</h5>
+                            </div>
+                        }
+                    }
                 </form>
             </div>
         </div>
